@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import JoinPropertyForm from '../components/JoinPropertyForm'
+import TenantBills from '../components/TenantBills'
+import RoomPicker from '../components/RoomPicker'
 
 const peso = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' })
 
@@ -42,20 +44,29 @@ export default function TenantDashboard() {
         ) : !tenancy ? (
           <JoinPropertyForm onJoined={loadTenancy} />
         ) : tenancy.status === 'pending' ? (
-          <div className="bg-white rounded-2xl shadow border border-amber-200 p-8 text-center mt-10">
-            <p className="text-3xl mb-3">⏳</p>
-            <h2 className="text-xl font-bold text-slate-700 mb-1">
-              You've joined {tenancy.properties?.name}!
-            </h2>
-            <p className="text-slate-500 mb-6">
-              Waiting for the owner to assign your room.
-            </p>
-            <button
-              onClick={loadTenancy}
-              className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg"
-            >
-              Refresh status
-            </button>
+          <div className="bg-white rounded-2xl shadow border border-amber-200 p-8 mt-6">
+            <div className="text-center mb-6">
+              <p className="text-3xl mb-2">⏳</p>
+              <h2 className="text-xl font-bold text-slate-700 mb-1">
+                You've joined {tenancy.properties?.name}!
+              </h2>
+              <p className="text-slate-500">
+                {tenancy.room_id
+                  ? `You requested ${tenancy.rooms?.name} — waiting for the owner to approve.`
+                  : 'Pick the room that fits your budget — the owner will confirm it.'}
+              </p>
+            </div>
+
+            <RoomPicker currentRoomId={tenancy.room_id} onRequested={loadTenancy} />
+
+            <div className="text-center mt-6">
+              <button
+                onClick={loadTenancy}
+                className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg"
+              >
+                Refresh status
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-6 mt-6">
@@ -83,10 +94,7 @@ export default function TenantDashboard() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow border border-amber-200 p-6">
-              <h2 className="text-lg font-bold text-slate-700 mb-1">Bills & payments</h2>
-              <p className="text-sm text-slate-500">Coming in Phase 5 — hang tight, {profile?.full_name?.split(' ')[0]}.</p>
-            </div>
+            <TenantBills tenancyId={tenancy.id} />
           </div>
         )}
       </main>

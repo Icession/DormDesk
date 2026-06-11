@@ -35,7 +35,7 @@ export default function TenantsSection({ propertyId, rooms }) {
   }
 
   async function assignRoom(tenancy) {
-    const roomId = selectedRoom[tenancy.id]
+    const roomId = selectedRoom[tenancy.id] ?? tenancy.room_id
     if (!roomId) {
       alert('Pick a room first.')
       return
@@ -88,7 +88,7 @@ export default function TenantsSection({ propertyId, rooms }) {
         <div className="space-y-6">
           {pending.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-honey-600 text-amber-600 uppercase tracking-wide mb-2">
+              <h3 className="text-sm font-semibold text-amber-600 uppercase tracking-wide mb-2">
                 Pending — needs a room
               </h3>
               <ul className="space-y-3">
@@ -102,10 +102,15 @@ export default function TenantsSection({ propertyId, rooms }) {
                       <p className="text-xs text-slate-400">
                         Joined {new Date(t.created_at).toLocaleDateString()}
                       </p>
+                      {t.room_id && (
+                        <p className="text-xs font-medium text-amber-600">
+                          Requested {t.rooms?.name}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <select
-                        value={selectedRoom[t.id] ?? ''}
+                        value={selectedRoom[t.id] ?? t.room_id ?? ''}
                         onChange={(e) =>
                           setSelectedRoom((prev) => ({ ...prev, [t.id]: e.target.value }))
                         }
