@@ -1,0 +1,17 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping DormDesk database
+        run: |
+          curl --silent --show-error --fail \
+            "${{ secrets.DORMDESK_SUPABASE_URL }}/rest/v1/profiles?select=id&limit=1" \
+            -H "apikey: ${{ secrets.DORMDESK_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.DORMDESK_SUPABASE_ANON_KEY }}"
