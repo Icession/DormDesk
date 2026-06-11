@@ -1,4 +1,4 @@
-# DormDesk 🏠
+# DormDesk
 
 **Home base for your boarding house.** A full-stack management platform for
 Philippine boarding houses and dormitories — built for owners who currently run
