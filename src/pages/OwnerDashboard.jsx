@@ -6,6 +6,8 @@ import InviteCodeCard from '../components/InviteCodeCard'
 import RoomsSection from '../components/RoomsSection'
 import TenantsSection from '../components/TenantsSection'
 import BillsSection from '../components/BillsSection'
+import MaintenanceSection from '../components/MaintenanceSection'
+import StatsRow from '../components/StatsRow'
 
 export default function OwnerDashboard() {
   const { session, signOut } = useAuth()
@@ -58,9 +60,11 @@ export default function OwnerDashboard() {
           <CreatePropertyForm ownerId={session.user.id} onCreated={setProperty} />
         ) : (
           <div className="space-y-6">
+            <StatsRow propertyId={property.id} />
             <InviteCodeCard code={property.invite_code} />
             <TenantsSection propertyId={property.id} rooms={rooms} />
             <BillsSection propertyId={property.id} />
+            <MaintenanceSection propertyId={property.id} />
             <RoomsSection propertyId={property.id} rooms={rooms} setRooms={setRooms} />
           </div>
         )}

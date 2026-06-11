@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import JoinPropertyForm from '../components/JoinPropertyForm'
 import TenantBills from '../components/TenantBills'
+import TenantMaintenance from '../components/TenantMaintenance'
 import RoomPicker from '../components/RoomPicker'
 
 const peso = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' })
@@ -95,6 +96,7 @@ export default function TenantDashboard() {
             </div>
 
             <TenantBills tenancyId={tenancy.id} />
+            <TenantMaintenance tenancyId={tenancy.id} />
           </div>
         )}
       </main>
