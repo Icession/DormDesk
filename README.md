@@ -4,7 +4,7 @@
 Philippine boarding houses and dormitories — built for owners who currently run
 everything through notebooks and GCash screenshots.
 
-**Live demo:** https://YOUR-VERCEL-URL.vercel.app
+**Live demo:** https://dorm-desk.vercel.app
 
 | Try it as | Email | Password |
 |---|---|---|
