@@ -7,7 +7,8 @@ const peso = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP'
 const inputCls =
   'rounded-lg border border-amber-200 bg-white px-3 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500'
 
-const BILL_SELECT = '*, bill_items(*), tenancies(id, profiles(full_name), rooms(name))'
+const BILL_SELECT =
+  '*, bill_items(*), payments(*), tenancies(id, profiles(full_name), rooms(name))'
 
 export default function BillsSection({ propertyId }) {
   const [tenancies, setTenancies] = useState([])
@@ -15,14 +16,12 @@ export default function BillsSection({ propertyId }) {
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
 
-  // generate-bill form
   const [tenancyId, setTenancyId] = useState('')
   const [month, setMonth] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // add-item form (used inside the expanded bill)
   const [itemLabel, setItemLabel] = useState('')
   const [itemAmount, setItemAmount] = useState('')
 
@@ -52,7 +51,7 @@ export default function BillsSection({ propertyId }) {
 
   function onMonthChange(value) {
     setMonth(value)
-    if (value) setDueDate(`${value}-05`) // suggest the 5th; owner can change it
+    if (value) setDueDate(`${value}-05`)
   }
 
   async function generateBill(e) {
@@ -65,7 +64,6 @@ export default function BillsSection({ propertyId }) {
     }
     setSubmitting(true)
 
-    // 1. Create the bill
     const { data: bill, error: billErr } = await supabase
       .from('bills')
       .insert({
@@ -87,7 +85,6 @@ export default function BillsSection({ propertyId }) {
       return
     }
 
-    // 2. Auto-add the rent line item from the room's rate
     const { error: itemErr } = await supabase.from('bill_items').insert({
       bill_id: bill.id,
       label: `Rent — ${tenancy.rooms?.name ?? 'room'}`,
@@ -95,7 +92,6 @@ export default function BillsSection({ propertyId }) {
     })
     if (itemErr) console.error('Rent item failed:', itemErr.message)
 
-    // 3. Refetch the full bill (with items + names) and show it expanded
     const { data: fullBill } = await supabase
       .from('bills')
       .select(BILL_SELECT)
@@ -154,6 +150,37 @@ export default function BillsSection({ propertyId }) {
     setBills((prev) => prev.filter((b) => b.id !== bill.id))
   }
 
+  async function reviewPayment(billId, paymentId, newStatus) {
+    const { error } = await supabase
+      .from('payments')
+      .update({ status: newStatus, reviewed_at: new Date().toISOString() })
+      .eq('id', paymentId)
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    // The trigger just recalculated this bill's status — refetch it fresh
+    const { data: fresh, error: freshErr } = await supabase
+      .from('bills')
+      .select(BILL_SELECT)
+      .eq('id', billId)
+      .single()
+
+    if (!freshErr && fresh) {
+      setBills((prev) => prev.map((b) => (b.id === billId ? fresh : b)))
+    }
+  }
+
+  async function viewProof(path) {
+    const { data, error } = await supabase.storage
+      .from('payment-proofs')
+      .createSignedUrl(path, 300)
+    if (error) alert(error.message)
+    else window.open(data.signedUrl, '_blank')
+  }
+
   const billTotal = (b) => b.bill_items.reduce((sum, i) => sum + Number(i.amount), 0)
   const monthLabel = (d) =>
     new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })
@@ -162,7 +189,6 @@ export default function BillsSection({ propertyId }) {
     <div className="bg-white rounded-2xl shadow border border-amber-200 p-6">
       <h2 className="text-lg font-bold text-slate-700 mb-4">Bills</h2>
 
-      {/* Generate bill */}
       <form
         onSubmit={generateBill}
         className="grid grid-cols-1 sm:grid-cols-[1fr_150px_150px_auto] gap-3 mb-2"
@@ -202,7 +228,6 @@ export default function BillsSection({ propertyId }) {
 
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-      {/* Bills list */}
       {loading ? (
         <p className="text-slate-500 text-sm">Loading…</p>
       ) : bills.length === 0 ? (
@@ -249,6 +274,62 @@ export default function BillsSection({ propertyId }) {
                       </li>
                     ))}
                   </ul>
+
+                  {bill.payments.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                        Payments
+                      </h4>
+                      <ul className="space-y-2">
+                        {bill.payments.map((p) => (
+                          <li
+                            key={p.id}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm bg-white border border-amber-200 rounded-lg px-3 py-2"
+                          >
+                            <div>
+                              <span className="font-medium text-slate-700">
+                                {peso.format(p.amount)}
+                              </span>
+                              <span className="text-slate-400">
+                                {' '}· {p.method}
+                                {p.reference_number ? ` · Ref ${p.reference_number}` : ''}
+                              </span>
+                              <span className="text-xs text-slate-400 block">
+                                {new Date(p.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {p.proof_path && (
+                                <button
+                                  onClick={() => viewProof(p.proof_path)}
+                                  className="text-xs font-medium text-slate-500 hover:text-slate-700 underline"
+                                >
+                                  View proof
+                                </button>
+                              )}
+                              <StatusBadge status={p.status} />
+                              {p.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => reviewPayment(bill.id, p.id, 'approved')}
+                                    className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => reviewPayment(bill.id, p.id, 'rejected')}
+                                    className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 items-center">
                     <input
